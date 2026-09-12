@@ -8,7 +8,13 @@ die mehrere durch Komma getrennte Adressen enthalten. Zusätzlich werden alle
 Seiten für Suchmaschinen gesperrt, damit die Vorschau der eigentlichen Domain
 keine Konkurrenz macht.
 
-Aufruf:  python3 pfade-umschreiben.py <Verzeichnis> <Präfix>
+Zusätzlich zeigen die Social-Media-Vorschaubilder auf die Vorschau-Adresse
+statt auf die eigene Domain – dort liegt die Datei noch nicht, und beim
+Weiterschicken des Links (WhatsApp, Signal, E-Mail) käme sonst eine
+Vorschaukarte ohne Bild. Die Angabe rel="canonical" bleibt bewusst auf der
+eigenen Domain: sie weist Suchmaschinen auf das spätere Original hin.
+
+Aufruf:  python3 pfade-umschreiben.py <Verzeichnis> <Präfix> [<Vorschau-Adresse>]
 """
 import json
 import pathlib
@@ -17,6 +23,8 @@ import sys
 
 target = pathlib.Path(sys.argv[1])
 prefix = sys.argv[2].rstrip('/')          # z. B. "/A.Awad"
+site = sys.argv[3].rstrip('/') if len(sys.argv) > 3 else ''   # z. B. "https://…/A.Awad"
+EIGENE_DOMAIN = 'https://bauservice-awad.de'
 
 
 def fix_srcset(match):
@@ -43,6 +51,14 @@ for file in sorted(target.rglob('*.html')):
     # Vorschau nicht indexieren lassen
     s = s.replace('content="index, follow, max-image-preview:large"',
                   'content="noindex, nofollow"')
+
+    # Vorschaubild und Adresse für geteilte Links auf die Vorschau umbiegen
+    if site:
+        for prop in ('og:image', 'twitter:image', 'og:url'):
+            s = re.sub(
+                r'(<meta (?:property|name)="%s" content=")%s' % (re.escape(prop), re.escape(EIGENE_DOMAIN)),
+                r'\1' + site,
+                s)
 
     if s != original:
         file.write_text(s, encoding='utf-8')

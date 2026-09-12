@@ -45,7 +45,7 @@ jobs:
 
           # Pfade auf das Unterverzeichnis umstellen und Seiten sperren.
           # Das Skript bricht ab, wenn ein Pfad übrig bleibt.
-          python3 .github/workflows/pfade-umschreiben.py _site /A.Awad
+          python3 .github/workflows/pfade-umschreiben.py _site /A.Awad https://sawad4832-boop.github.io/A.Awad
 
           # Suchmaschinen komplett aussperren
           printf 'User-agent: *\nDisallow: /\n' > _site/robots.txt
