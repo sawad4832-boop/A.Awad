@@ -1,0 +1,77 @@
+# ---------------------------------------------------------------------------
+# Veröffentlicht die Website als Vorschau auf GitHub Pages.
+#
+#   Ergebnis: https://sawad4832-boop.github.io/A.Awad/
+#
+# GitHub Pages liefert Projektseiten in einem Unterverzeichnis aus. Deshalb
+# schreibt der Build absolute Pfade (/assets/…, /kontakt.html) auf /A.Awad/…
+# um – einschließlich der srcset-Listen für die WebP-Bilder. Außerdem werden
+# alle Seiten auf "noindex" gesetzt, damit die Vorschau der späteren eigenen
+# Domain bauservice-awad.de bei Google keine Konkurrenz macht.
+#
+# Die Dateien im Repository bleiben unverändert und sind weiterhin für das
+# Hosting direkt unter der eigenen Domain vorbereitet.
+# ---------------------------------------------------------------------------
+name: Website-Vorschau
+
+on:
+  push:
+    branches: [claude/awad-bauservice-website-la75b3]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Seiten zusammenstellen
+        run: |
+          set -eu
+          mkdir -p _site
+          cp -r index.html leistungen.html projekte.html kontakt.html \
+                impressum.html datenschutz.html 404.html \
+                assets favicon.ico site.webmanifest _site/
+
+          # Pfade auf das Unterverzeichnis umstellen und Seiten sperren.
+          # Das Skript bricht ab, wenn ein Pfad übrig bleibt.
+          python3 .github/workflows/pfade-umschreiben.py _site /A.Awad
+
+          # Suchmaschinen komplett aussperren
+          printf 'User-agent: *\nDisallow: /\n' > _site/robots.txt
+
+          # Die sitemap.xml verweist auf die echte Domain und gehört nicht in die Vorschau
+          rm -f _site/sitemap.xml
+
+          echo "Dateien gesamt: $(find _site -type f | wc -l)"
+
+      - name: GitHub Pages einrichten
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Vorschau hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  veroeffentlichen:
+    needs: bauen
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Auf GitHub Pages veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
