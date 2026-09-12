@@ -1,0 +1,164 @@
+<!--META
+{
+  "path": "/kontakt.html",
+  "title": "Kontakt & Angebot anfordern | A.Awad Bauservice Oranienburg",
+  "ogtitle": "Kontakt – A.Awad Bauservice Oranienburg",
+  "desc": "Kostenloses und unverbindliches Angebot für Fliesen, Trockenbau und Innenausbau. Telefon 0176 41949447, Bernauer Str. 122, 16515 Oranienburg.",
+  "active": "kontakt",
+  "jsonld": "business"
+}
+META-->
+
+<section class="page-head">
+  <div class="wrap">
+    <p class="breadcrumb"><a href="/">Start</a> &rsaquo; Kontakt</p>
+    <h1>Kontakt &amp; Angebot</h1>
+    <p>Erzählen Sie uns von Ihrem Vorhaben. Wir melden uns in der Regel innerhalb von
+       24 Stunden mit einer ersten Einschätzung.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap contact-grid">
+
+    <div class="contact-card reveal">
+      <h2>So erreichen Sie uns</h2>
+      <ul class="contact-list">
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>
+          <div><strong>Telefon</strong><a href="tel:+4917641949447">0176 41949447</a></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+          <div><strong>E-Mail</strong><a href="mailto:info@bauservice-awad.de">info@bauservice-awad.de</a></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div><strong>Anschrift</strong><span>Bernauer Str. 122<br>16515 Oranienburg</span></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.7 13.7L3 21l4.4-1.2A9 9 0 1 0 12 3Z"/></svg>
+          <div><strong>WhatsApp</strong><a href="https://wa.me/4917641949447" rel="noopener">Direkt schreiben – auch mit Fotos</a></div>
+        </li>
+      </ul>
+
+      <div class="btn-row">
+        <a class="btn btn--gold" href="tel:+4917641949447">Jetzt anrufen</a>
+        <a class="btn btn--wa" href="https://wa.me/4917641949447" rel="noopener">WhatsApp</a>
+      </div>
+
+      <p style="margin-top:2rem;font-size:var(--fs-xs);color:var(--text-invert-2);border-top:1px solid var(--line-dark);padding-top:1.5rem">
+        <strong style="color:#fff;display:block;margin-bottom:.35rem">Ein Tipp für eine schnelle Einschätzung</strong>
+        Schicken Sie uns Fotos des Raumes und – wenn vorhanden – die ungefähren Maße.
+        So können wir Ihnen oft schon vor dem Besichtigungstermin eine Größenordnung nennen.
+      </p>
+    </div>
+
+    <div class="reveal">
+      <h2 style="font-size:var(--fs-h2);margin-bottom:.75rem">Angebot anfordern</h2>
+      <p style="color:var(--text-2);margin-bottom:2rem">
+        Kostenlos und unverbindlich. Pflichtfelder sind mit <span style="color:var(--gold-deep)">*</span> gekennzeichnet.
+      </p>
+
+      <form class="form" id="kontaktformular" method="post" action="#" novalidate>
+        <p class="hp" aria-hidden="true">
+          <label for="website">Bitte nicht ausfüllen</label>
+          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+        </p>
+
+        <div class="form__row">
+          <div class="field">
+            <label for="name">Name <span class="req">*</span></label>
+            <input type="text" id="name" name="name" autocomplete="name" required>
+            <p class="field__err" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="telefon">Telefon <span class="req">*</span></label>
+            <input type="tel" id="telefon" name="telefon" autocomplete="tel" required>
+            <p class="field__err" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="form__row">
+          <div class="field">
+            <label for="email">E-Mail <span class="req">*</span></label>
+            <input type="email" id="email" name="email" autocomplete="email" required>
+            <p class="field__err" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="ort">PLZ / Ort</label>
+            <input type="text" id="ort" name="ort" autocomplete="postal-code">
+            <p class="field__err" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="leistung">Gewünschte Leistung</label>
+          <select id="leistung" name="leistung">
+            <option>Fliesen- &amp; Natursteinarbeiten</option>
+            <option>Trockenbau</option>
+            <option>Innenausbau</option>
+            <option>Boden &amp; Estrich</option>
+            <option>Badsanierung</option>
+            <option>Renovierung &amp; Sanierung</option>
+            <option>Beratung &amp; Planung</option>
+            <option>Sonstiges / noch unklar</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="nachricht">Ihr Vorhaben <span class="req">*</span></label>
+          <textarea id="nachricht" name="nachricht" required
+                    placeholder="Zum Beispiel: Badezimmer ca. 6 m², Fliesen an Wand und Boden erneuern, Wanne soll bleiben. Gewünschter Zeitraum: Frühjahr."></textarea>
+          <p class="field__err" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="datenschutz" name="datenschutz" required>
+            <span>Ich habe die <a href="/datenschutz.html">Datenschutzhinweise</a> gelesen und bin damit
+                  einverstanden, dass meine Angaben zur Bearbeitung meiner Anfrage verwendet werden. <span class="req">*</span></span>
+          </label>
+          <p class="field__err" aria-live="polite"></p>
+        </div>
+
+        <p class="form__status" role="status" aria-live="polite" hidden></p>
+
+        <div>
+          <button class="btn btn--gold btn--lg" type="submit">Anfrage absenden</button>
+        </div>
+
+        <p style="font-size:var(--fs-xs);color:var(--text-3)">
+          Sie erreichen uns auch direkt telefonisch unter
+          <a href="tel:+4917641949447" style="color:var(--gold-deep);font-weight:600">0176 41949447</a>.
+        </p>
+      </form>
+    </div>
+
+  </div>
+</section>
+
+<section class="section section--paper section--tight">
+  <div class="wrap">
+    <div class="section-head section-head--center reveal" style="margin-bottom:2rem">
+      <p class="eyebrow">Anfahrt</p>
+      <h2>Unser Standort in Oranienburg</h2>
+      <p>Bernauer Str. 122, 16515 Oranienburg – im Landkreis Oberhavel, rund 35 km
+         nördlich der Berliner Innenstadt.</p>
+    </div>
+    <div class="btn-row reveal" style="justify-content:center">
+      <a class="btn btn--ghost" href="https://www.openstreetmap.org/search?query=Bernauer%20Str.%20122%2C%2016515%20Oranienburg"
+         target="_blank" rel="noopener">
+        Auf OpenStreetMap ansehen
+      </a>
+      <a class="btn btn--ghost" href="https://www.google.com/maps/dir/?api=1&destination=Bernauer+Str.+122,+16515+Oranienburg"
+         target="_blank" rel="noopener">
+        Route planen
+      </a>
+    </div>
+    <p style="text-align:center;font-size:var(--fs-xs);color:var(--text-3);margin-top:1.25rem">
+      Aus Datenschutzgründen binden wir keine Kartendienste direkt auf dieser Seite ein.
+      Die Links öffnen sich in einem neuen Tab.
+    </p>
+  </div>
+</section>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://bauservice-awad.de/sitemap.xml
