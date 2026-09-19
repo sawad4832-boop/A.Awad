@@ -5,11 +5,16 @@
  * übernehmen. Der Prüfschritt ist bewusst nicht überspringbar: eine
  * Texterkennung liest nie fehlerfrei, und falsche Vokabeln würden sich sonst
  * mitlernen.
+ *
+ * Die Erkennung läuft über Claude und steht nicht in jeder Ansicht zur
+ * Verfügung. Deshalb gibt es hier immer auch den Weg über eingefügten Text –
+ * am iPhone lässt sich der Text direkt im Foto markieren und kopieren.
  */
 
 import { el, ersetzen, balken, dialog, ansagen } from '../core/dom.js';
 import { anzahlText } from '../core/format.js';
-import { erkennungSuchen, claudeFehlerText, MAX_FOTOS } from '../data/ocr.js';
+import { erkennungSuchen, claudeFehlerText, grundText, MAX_FOTOS } from '../data/ocr.js';
+import { textEinlesen } from '../data/import.js';
 import { vokabelAnlegen } from '../data/vocab.js';
 import { bildVorschlag } from '../data/bilder.js';
 import { SPRACHEN } from '../data/sprachen.js';
@@ -25,11 +30,11 @@ import { symbolWaehlen } from './bildwahl.js';
 export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   const inhalt = el('div.stapel', {});
   const wahl = { sprache: sprache || 'Englisch', sprachcode: sprachcode || 'en-US' };
+
   let dateien = [];
   let vorschauUrls = [];
   let abbruch = null;
-  let erkennung = null;
-  let gesucht = false;
+  let erkennung = null;      // Ergebnis der Suche, sobald sie da ist
   let schritt = 'auswahl';
 
   const steuerung = dialog({
@@ -41,17 +46,74 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
     }
   });
 
+  const bereit = () => Boolean(erkennung && erkennung.status === 'bereit');
+
   /* --- Schritt 1: Foto wählen -------------------------------------------- */
+
   function auswahlZeigen(meldung) {
     schritt = 'auswahl';
-    const vorschau = el('div.reihe', {}, dateien.map((datei, stelle) =>
+
+    const eingabe = el('input', {
+      type: 'file',
+      accept: bereit() ? erkennung.dateitypen.join(',') : 'image/jpeg,image/png,image/webp',
+      multiple: true,
+      style: { display: 'none' },
+      onchange: (e) => {
+        const neue = [...e.target.files];
+        const platz = Math.max(0, MAX_FOTOS - dateien.length);
+        dateien = [...dateien, ...neue.slice(0, platz)];
+        vorschauUrls = [...vorschauUrls, ...neue.slice(0, platz).map((datei) => URL.createObjectURL(datei))];
+        e.target.value = '';   // dasselbe Foto darf erneut gewählt werden
+        auswahlZeigen(neue.length > platz
+          ? hinweis(`Es können höchstens ${MAX_FOTOS} Fotos auf einmal ausgewertet werden.`, 'warn')
+          : null);
+      }
+    });
+
+    // Genau eine Meldung: entweder die übergebene oder der Grund, warum die
+    // Erkennung hier nicht geht.
+    const kopfmeldung = meldung
+      || (erkennung && !bereit() ? hinweis(grundText(erkennung.status), 'warn') : null);
+
+    ersetzen(inhalt,
+      el('p.leise.klein', {},
+        'Fotografiere eine Vokabelliste – zum Beispiel aus dem Schulbuch oder aus deinem Heft. ' +
+        'Zwei Spalten werden automatisch zugeordnet, Artikel kommen mit.'),
+      el('p.klein.leise', {},
+        `Mehrere Seiten? Füge nacheinander weitere Fotos hinzu – bis zu ${MAX_FOTOS} Seiten werden ` +
+        'zusammen ausgewertet und doppelte Vokabeln dabei zusammengeführt.'),
+      kopfmeldung,
+      spracheWaehlen(),
+
+      el('label.knopf' + (dateien.length ? '' : '.knopf--haupt') + '.knopf--gross.knopf--voll', {},
+        dateien.length ? '+ Weiteres Foto hinzufügen' : '📷 Foto oder Bild wählen', eingabe),
+      dateien.length ? vorschauReihe() : null,
+      dateien.length
+        ? el('button.knopf.knopf--haupt.knopf--gross.knopf--voll', {
+            type: 'button', onclick: erkennenStarten
+          }, dateien.length === 1 ? 'Foto auswerten' : `${dateien.length} Seiten auswerten`)
+        : null,
+      dateien.length > 1
+        ? el('button.knopf.knopf--leise.klein', { type: 'button', onclick: alleEntfernen }, 'Alle entfernen')
+        : null,
+
+      el('p.klein.leise', {}, hinweisZumWeg()),
+      el('button.knopf.knopf--voll', { type: 'button', onclick: () => einfuegenZeigen() }, '⌨️ Text einfügen statt Foto')
+    );
+  }
+
+  function vorschauReihe() {
+    return el('div.reihe', {}, dateien.map((datei, stelle) =>
       el('div', { style: { position: 'relative' } },
         el('div.bild.bild--klein', {}, el('img', { src: vorschauUrls[stelle], alt: `Seite ${stelle + 1}` })),
         el('span.klein.leise', { style: { display: 'block', textAlign: 'center' } }, `Seite ${stelle + 1}`),
         el('button.knopf.knopf--leise.knopf--gefahr', {
           type: 'button',
           'aria-label': `Seite ${stelle + 1} entfernen`,
-          style: { position: 'absolute', top: '-8px', right: '-8px', minHeight: 'auto', padding: '.1rem .35rem', background: 'var(--flaeche)' },
+          style: {
+            position: 'absolute', top: '-8px', right: '-8px', minHeight: 'auto',
+            padding: '.1rem .35rem', background: 'var(--flaeche)'
+          },
           onclick: () => {
             URL.revokeObjectURL(vorschauUrls[stelle]);
             dateien.splice(stelle, 1);
@@ -60,26 +122,17 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
           }
         }, '✕')
       )));
+  }
 
-    const eingabe = el('input', {
-      type: 'file',
-      accept: erkennung ? erkennung.dateitypen.join(',') : 'image/jpeg,image/png,image/webp',
-      multiple: !erkennung || erkennung.maxBilder > 1,
-      style: { display: 'none' },
-      onchange: (e) => {
-        const grenze = erkennung ? erkennung.maxBilder : MAX_FOTOS;
-        const neue = [...e.target.files];
-        const platz = Math.max(0, grenze - dateien.length);
-        dateien = [...dateien, ...neue.slice(0, platz)];
-        vorschauUrls = [...vorschauUrls, ...neue.slice(0, platz).map((datei) => URL.createObjectURL(datei))];
-        e.target.value = '';   // dasselbe Foto darf erneut gewählt werden
-        auswahlZeigen(neue.length > platz
-          ? hinweis(`Es können höchstens ${grenze} Fotos auf einmal ausgewertet werden.`, 'warn')
-          : null);
-      }
-    });
+  function alleEntfernen() {
+    vorschauUrls.forEach((url) => URL.revokeObjectURL(url));
+    dateien = [];
+    vorschauUrls = [];
+    auswahlZeigen();
+  }
 
-    const spracheWaehlen = el('label.reihe', { style: { alignItems: 'center', gap: '.5rem' } },
+  function spracheWaehlen() {
+    return el('label.reihe', { style: { alignItems: 'center', gap: '.5rem' } },
       el('span.etikett', { style: { marginBottom: '0' } }, 'Sprache der Vokabeln'),
       el('select.knopf', {
         onchange: (e) => {
@@ -91,68 +144,64 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
         value: `${name}|${code}`, selected: name === wahl.sprache
       }, name)))
     );
-
-    ersetzen(inhalt,
-      el('p.leise.klein', {},
-        'Fotografiere eine Vokabelliste – zum Beispiel aus dem Schulbuch oder aus deinem Heft. ' +
-        'Zwei Spalten werden automatisch zugeordnet, Artikel kommen mit.'),
-      el('p.klein.leise', {},
-        `Mehrere Seiten? Füge nacheinander weitere Fotos hinzu – bis zu ${MAX_FOTOS} Seiten werden ` +
-        'zusammen ausgewertet und doppelte Vokabeln dabei zusammengeführt.'),
-      meldung || null,
-      gesucht && !erkennung ? nichtVerfuegbar() : null,
-      spracheWaehlen,
-      el('label.knopf' + (dateien.length ? '' : '.knopf--haupt') + '.knopf--gross.knopf--voll', {},
-        dateien.length ? '+ Weiteres Foto hinzufügen' : '📷 Foto oder Bild wählen', eingabe),
-      dateien.length ? vorschau : null,
-      dateien.length
-        ? el('button.knopf.knopf--haupt.knopf--gross.knopf--voll', {
-            type: 'button', onclick: erkennenStarten
-          }, dateien.length === 1 ? 'Foto auswerten' : `${dateien.length} Seiten auswerten`)
-        : null,
-      dateien.length > 1
-        ? el('button.knopf.knopf--leise.klein', {
-            type: 'button',
-            onclick: () => {
-              vorschauUrls.forEach((url) => URL.revokeObjectURL(url));
-              dateien = [];
-              vorschauUrls = [];
-              auswahlZeigen();
-            }
-          }, 'Alle entfernen')
-        : null,
-      el('p.klein.leise', {}, hinweisZumWeg()),
-      el('p.klein.leise', {},
-        'Tipp: gerade von oben fotografieren, möglichst ohne Schatten. ' +
-        'Auf dem iPhone kannst du den Text auch direkt im Foto markieren, kopieren ' +
-        'und unter „Importieren“ einfügen.')
-    );
   }
 
   function hinweisZumWeg() {
-    if (!gesucht) return 'Bilderkennung wird vorbereitet – du kannst schon Fotos auswählen.';
-    if (!erkennung) return '';
+    if (!erkennung) return 'Bilderkennung wird vorbereitet – du kannst schon Fotos auswählen.';
+    if (!bereit()) return '';
     return 'Claude liest das Foto – auch Handschrift – und übernimmt dabei die Artikel. ' +
       'Dafür wird dein Claude-Kontingent genutzt; beim ersten Mal wird um Erlaubnis gefragt.';
   }
 
-  /** Hinweis, wenn die Seite Claude nicht fragen darf. */
-  function nichtVerfuegbar() {
-    return hinweis(
-      'Die Foto-Erkennung läuft über Claude und ist hier nicht erreichbar – das ist in einer ' +
-      'lokalen Kopie der App so, oder wenn die Seite Claude nicht nutzen darf. Du kannst die ' +
-      'Vokabeln unter „Importieren“ als Liste einfügen.',
-      'warn'
+  /* --- Weg ohne Foto: Text einfügen -------------------------------------- */
+
+  function einfuegenZeigen(meldung) {
+    schritt = 'einfuegen';
+
+    const feld = el('textarea.feld', {
+      'aria-label': 'Vokabelliste einfügen',
+      placeholder: 'la casa – das Haus\nel perro – der Hund\nel libro – das Buch',
+      style: { minHeight: '180px' }
+    });
+
+    const uebernehmen = el('button.knopf.knopf--haupt.knopf--gross.knopf--voll', {
+      type: 'button',
+      onclick: () => {
+        const eintraege = textEinlesen(feld.value).eintraege;
+        if (!eintraege.length) {
+          einfuegenZeigen(hinweis('Darin konnte ich keine Vokabelpaare erkennen. Zwischen Wort und ' +
+            'Übersetzung sollte ein Trennzeichen stehen – ein Gedankenstrich, Tabulator oder Semikolon.', 'warn'));
+          return;
+        }
+        pruefenZeigen(eintraege);
+      }
+    }, 'Vokabeln erkennen');
+
+    ersetzen(inhalt,
+      meldung || null,
+      el('p.leise.klein', {},
+        'Am iPhone geht das ohne Umweg: Foto in der Fotos-App öffnen, auf das Textsymbol unten ' +
+        'rechts tippen, den Text markieren, kopieren – und hier einfügen. Das erkennt auch ' +
+        'Handschrift und funktioniert ohne Claude.'),
+      el('p.klein.leise', {},
+        'Eine Vokabel pro Zeile, getrennt durch „–“, „-“, Tabulator, „;“ oder „=“. ' +
+        'Artikel am Wortanfang (la, el, the, der …) werden automatisch erkannt.'),
+      spracheWaehlen(),
+      feld,
+      uebernehmen,
+      el('button.knopf.knopf--leise.knopf--voll', { type: 'button', onclick: () => auswahlZeigen() }, '← Zurück zum Foto')
     );
+    feld.focus();
   }
 
   /* --- Schritt 2: erkennen ----------------------------------------------- */
+
   async function erkennenStarten() {
     if (!dateien.length || schritt === 'liest') return;
     schritt = 'liest';
     abbruch = new AbortController();
 
-    const text = el('p', {}, erkennung ? 'Wird vorbereitet …' : 'Bilderkennung wird vorbereitet …');
+    const text = el('p', {}, bereit() ? 'Wird vorbereitet …' : 'Bilderkennung wird vorbereitet …');
     const fortschritt = el('div', {}, balken(0.05));
     ersetzen(inhalt,
       el('div.stapel', {}, text, fortschritt,
@@ -160,12 +209,9 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
 
     // Die Anbindung meldet sich erst kurz nach dem Laden der Seite. Wer schneller
     // tippt, wartet hier – der Knopf darf nie wirkungslos sein.
-    if (!erkennung) {
-      erkennung = await suche;
-      gesucht = true;
-    }
-    if (!erkennung) {
-      auswahlZeigen(nichtVerfuegbar());
+    if (!erkennung) erkennung = await suche;
+    if (!bereit()) {
+      auswahlZeigen(hinweis(grundText(erkennung.status), 'warn'));
       abbruch = null;
       return;
     }
@@ -199,7 +245,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
       const meldung = fehler && fehler.code
         ? claudeFehlerText(fehler)
         : 'Das Foto konnte nicht ausgewertet werden. Versuch es noch einmal ' +
-          'oder füge die Vokabeln unter „Importieren“ als Text ein.';
+          'oder füge den Text ein.';
       if (teilErgebnis.length) {
         pruefenZeigen(teilErgebnis, 'Nicht alle Seiten konnten gelesen werden: ' + meldung);
       } else {
@@ -211,6 +257,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   }
 
   /* --- Schritt 3: prüfen und korrigieren --------------------------------- */
+
   function pruefenZeigen(eintraege, warnung) {
     schritt = 'pruefen';
     const liste = el('div.setliste', {});
@@ -298,7 +345,11 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
       el('div.reihe', {},
         el('button.knopf', {
           type: 'button',
-          onclick: () => { eintraege.push({ wort: '', bedeutung: '', artikel: '', plural: '', beispiel: '', bild: null }); zeichnen(); zaehlerAktualisieren(); }
+          onclick: () => {
+            eintraege.push({ wort: '', bedeutung: '', artikel: '', plural: '', beispiel: '', bild: null });
+            zeichnen();
+            zaehlerAktualisieren();
+          }
         }, '+ Zeile'),
         el('button.knopf.knopf--leise', { type: 'button', onclick: () => auswahlZeigen() }, 'Anderes Foto')
       ),
@@ -311,17 +362,12 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   }
 
   // Erkennung im Hintergrund vorbereiten, damit der Dialog sofort offen ist.
-  // Die Zeitgrenze verhindert, dass der Dialog wartet, wenn sich niemand meldet.
-  const suche = Promise.race([
-    erkennungSuchen(),
-    new Promise((erfuellen) => setTimeout(() => erfuellen(null), 12000))
-  ]);
+  const suche = erkennungSuchen();
 
   auswahlZeigen();
 
   suche.then((gefunden) => {
     erkennung = gefunden;
-    gesucht = true;
     // Nur neu zeichnen, solange die Auswahl zu sehen ist – sonst würde eine
     // bereits geöffnete Prüfliste überschrieben.
     if (schritt === 'auswahl') auswahlZeigen();

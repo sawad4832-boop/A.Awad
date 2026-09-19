@@ -127,10 +127,16 @@ Das Erkannte wird **immer zuerst zum Prüfen angezeigt**: Wörter korrigieren,
 Zeilen löschen, Bilder ändern – erst dann wird übernommen. Überschriften wie
 „Unit 3“ und Nummerierungen werden aussortiert.
 
-Diese Funktion läuft über Claude und steht deshalb nur in der veröffentlichten
-Version der App zur Verfügung; die Anfrage geht über das Claude-Konto des
-Nutzers. In einer lokalen Kopie sagt der Dialog das und verweist auf den
-Import als Textliste.
+Diese Funktion läuft über Claude und ist deshalb nicht in jeder Ansicht
+verfügbar: In einer lokalen Kopie fehlt die Anbindung ganz, und manche
+Ansichten – etwa die App auf dem Telefon – geben sie nicht frei. Der Dialog
+nennt den Grund und bietet denselben Weg ohne Claude an:
+
+**Text einfügen statt Foto.** Am iPhone erkennt die Fotos-App den Text im Bild
+selbst (Textsymbol unten rechts) – markieren, kopieren, im Dialog einfügen.
+Das liest auch Handschrift, braucht kein Claude-Kontingent und führt über
+dieselbe Prüfliste wie die Foto-Erkennung. Artikel am Wortanfang („la casa“,
+„der Hund“) werden dabei genauso erkannt.
 
 ## Vokabeln anlegen
 

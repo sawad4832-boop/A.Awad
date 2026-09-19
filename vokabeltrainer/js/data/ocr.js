@@ -33,39 +33,61 @@ const STANDARD_TYPEN = ['image/jpeg', 'image/png', 'image/webp'];
 
 /**
  * @typedef {Object} Erkennung
- * @property {number} maxBilder   Fotos insgesamt
- * @property {string[]} dateitypen
- * @property {(dateien: File[], optionen: Object) => Promise<Object[]>} lesen
+ * @property {'bereit'|'kein-claude'|'keine-erlaubnis'|'fehler'} status
+ * @property {number} [maxBilder]   Fotos insgesamt
+ * @property {string[]} [dateitypen]
+ * @property {(dateien: File[], optionen: Object) => Promise<Object[]>} [lesen]
  */
 
 /**
- * Sucht die Bilderkennung.
- * @returns {Promise<Erkennung|null>} null, wenn hier keine Erkennung möglich ist
+ * Sucht die Bilderkennung und sagt, woran es liegt, wenn sie fehlt.
+ *
+ * Der Grund wird mitgegeben, weil er für den Nutzer etwas anderes bedeutet:
+ * "kein-claude" heißt, die Seite läuft außerhalb der Claude-Ansicht;
+ * "keine-erlaubnis" heißt, diese Ansicht gibt Claude nicht frei.
+ *
+ * @returns {Promise<Erkennung>}
  */
 export async function erkennungSuchen() {
   try {
-    if (typeof window === 'undefined' || !window.claude || typeof window.claude.use !== 'function') return null;
+    if (typeof window === 'undefined' || !window.claude || typeof window.claude.use !== 'function') {
+      return { status: 'kein-claude' };
+    }
     const sample = await window.claude.use('sample');
-    if (!sample) return null;
-    const grenzen = await sample.limits().catch(() => null);
-    // Sagt die Ansicht ausdrücklich, dass sie keine Bilder schicken kann, ist hier Schluss.
-    if (grenzen && !grenzen.images) return null;
+    if (!sample) return { status: 'keine-erlaubnis' };
 
-    // Lässt sich das nicht ermitteln, wird es vorsichtig versucht: ein Bild pro
-    // Anfrage. Ein echtes Hindernis meldet dann die Anfrage selbst – mit einer
-    // Begründung, die der Nutzer lesen kann.
+    // Die Bildgrenzen sind nur ein Hinweis. Meldet die Ansicht keine, wird es
+    // trotzdem versucht – ein echtes Hindernis begründet dann die Anfrage
+    // selbst, und zwar mit einem Text, den der Nutzer lesen kann.
+    const grenzen = await sample.limits().catch(() => null);
     const bilder = (grenzen && grenzen.images) || null;
     const proAnfrage = Math.max(1, Math.min(BILDER_PRO_ANFRAGE, (bilder && bilder.maxCount) || 1));
+
     return {
+      status: 'bereit',
       maxBilder: MAX_FOTOS,
       proAnfrage,
+      bildgrenzenBekannt: Boolean(bilder),
       dateitypen: (bilder && bilder.mediaTypes) || STANDARD_TYPEN,
       lesen: (dateien, optionen) => lesen(sample, dateien, { ...optionen, proAnfrage })
     };
   } catch (fehler) {
     console.warn('Bilderkennung nicht verfügbar.', fehler);
-    return null;
+    return { status: 'fehler' };
   }
+}
+
+/** Erklärt, warum die Foto-Erkennung hier nicht geht – und was stattdessen hilft. */
+export function grundText(status) {
+  if (status === 'kein-claude') {
+    return 'Diese Seite läuft gerade außerhalb der Claude-Ansicht und kann Claude deshalb nicht ' +
+      'fragen. Öffne den Link in der Claude-App oder auf claude.ai – oder füge den Text unten ein.';
+  }
+  if (status === 'keine-erlaubnis') {
+    return 'In dieser Ansicht gibt Claude die Foto-Erkennung nicht frei. Am Rechner über claude.ai ' +
+      'klappt es meist; auf dem Telefon kannst du den Text unten einfügen.';
+  }
+  return 'Die Foto-Erkennung ist hier nicht erreichbar. Du kannst den Text unten einfügen.';
 }
 
 /**
