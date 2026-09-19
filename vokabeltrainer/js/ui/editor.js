@@ -12,12 +12,8 @@ import { bildVorschlag } from '../data/bilder.js';
 import { bildKachel, tonKnopf, leerzustand } from './gemeinsam.js';
 import { symbolWaehlen, bildVerkleinern, dateiAlsDatenUrl } from './bildwahl.js';
 import { sprechen, sprachausgabeMoeglich } from '../audio/speech.js';
-
-const SPRACHEN = [
-  ['Englisch', 'en-US'], ['Spanisch', 'es-ES'], ['Französisch', 'fr-FR'], ['Italienisch', 'it-IT'],
-  ['Niederländisch', 'nl-NL'], ['Portugiesisch', 'pt-PT'], ['Schwedisch', 'sv-SE'], ['Polnisch', 'pl-PL'],
-  ['Russisch', 'ru-RU'], ['Türkisch', 'tr-TR'], ['Arabisch', 'ar-SA'], ['Deutsch', 'de-DE'], ['Latein', 'la']
-];
+import { SPRACHEN } from '../data/sprachen.js';
+import { fotoScannen } from './scan.js';
 
 /**
  * @param {import('../data/vocab.js').Lernset} set
@@ -91,6 +87,7 @@ function vokabelBereich(set, aktionen) {
         type: 'button',
         onclick: () => vokabelDialog(set, null, aktionen)
       }, '+ Vokabel hinzufügen'),
+      el('button.knopf', { type: 'button', onclick: () => scanStarten(set, aktionen) }, '📷 Aus Foto'),
       set.vokabeln.length
         ? el('button.knopf', { type: 'button', onclick: () => aktionen.lernen(set.id) }, 'Lernen')
         : null
@@ -268,6 +265,21 @@ function vokabelDialog(set, vorhanden, aktionen) {
   return steuerung;
 }
 
+/** Öffnet die Foto-Erkennung und hängt das Ergebnis an das Lernset an. */
+export function scanStarten(set, aktionen) {
+  return fotoScannen({
+    sprache: set.sprache,
+    sprachcode: set.sprachcode,
+    onUebernehmen: (eintraege, sprachwahl) => {
+      if (sprachwahl && sprachwahl.sprache !== set.sprache) {
+        setSpeichern({ ...set, sprache: sprachwahl.sprache, sprachcode: sprachwahl.sprachcode });
+      }
+      vokabelnHinzufuegen(set.id, eintraege);
+      aktionen.neuZeichnen();
+    }
+  });
+}
+
 /* --- Import --------------------------------------------------------------- */
 
 function importBereich(set, aktionen) {
@@ -316,6 +328,14 @@ function importBereich(set, aktionen) {
   auswerten('');
 
   return el('div.stapel', {},
+    el('div.karte.stapel', { style: { padding: '1.15rem' } },
+      el('h3', { style: { fontSize: '1.05rem' } }, 'Foto abfotografieren'),
+      el('p.klein.leise', {}, 'Eine Vokabelliste aus dem Buch oder dem Heft fotografieren – ' +
+        'die Wortpaare werden erkannt und vor dem Übernehmen zum Prüfen angezeigt.'),
+      el('button.knopf.knopf--haupt.knopf--gross', {
+        type: 'button', onclick: () => scanStarten(set, aktionen)
+      }, '📷 Foto auswerten')
+    ),
     el('div.karte.stapel', { style: { padding: '1.15rem' } },
       el('h3', { style: { fontSize: '1.05rem' } }, 'Liste einfügen'),
       el('p.klein.leise', {}, 'Eine Vokabel pro Zeile, getrennt durch „–“, „-“, Tab, „;“ oder „=“. ' +

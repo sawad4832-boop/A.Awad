@@ -9,7 +9,7 @@ import { kennzahl, leerzustand } from './gemeinsam.js';
 /**
  * @param {import('../core/store.js').AppZustand} zustand
  * @param {{lernen:(setId:string, modus?:string)=>void, bearbeiten:(setId:string)=>void,
- *          neu:()=>void, fortschritt:()=>void}} aktionen
+ *          neu:()=>void, ausFoto:()=>void, fortschritt:()=>void}} aktionen
  */
 export function startseite(zustand, aktionen) {
   const zahlen = ueberblick(zustand);
@@ -61,7 +61,10 @@ export function startseite(zustand, aktionen) {
     el('section', {},
       el('div.abschnitt__kopf', {},
         el('h2', {}, 'Lernsets'),
-        el('button.knopf', { type: 'button', onclick: () => aktionen.neu() }, '+ Neues Lernset')
+        el('div.reihe', {},
+          el('button.knopf', { type: 'button', onclick: () => aktionen.ausFoto() }, '📷 Aus Foto'),
+          el('button.knopf', { type: 'button', onclick: () => aktionen.neu() }, '+ Neues Lernset')
+        )
       ),
       sets.length
         ? el('div.setliste', {}, sets.map((set) => setKarte(set, aktionen)))

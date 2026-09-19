@@ -11,7 +11,7 @@ import { zustandLesen, setLesen, setSpeichern } from '../core/store.js';
 import { Lernsession, rundeZusammenstellen } from '../learn/session.js';
 import { tonStoppen } from '../audio/speech.js';
 import { startseite } from './home.js';
-import { editorSeite } from './editor.js';
+import { editorSeite, scanStarten } from './editor.js';
 import { sessionSeite } from './lernen.js';
 import { ergebnisSeite } from './ergebnis.js';
 import { fortschrittSeite } from './fortschritt.js';
@@ -78,17 +78,28 @@ function zeichnen() {
     case 'set': {
       const set = setLesen(wert);
       if (!set) return gehe('#/');
-      return ersetzen(wurzel, editorSeite(set, {
+      const editorAktionen = {
         zurueck: () => gehe('#/'),
         neuZeichnen,
         lernen: (setId) => gehe(`#/lernen/${setId}/alle`)
-      }));
+      };
+      const seite = ersetzen(wurzel, editorSeite(set, editorAktionen));
+      if (zusatz === 'scan') {
+        // Nur einmal öffnen – die Adresse wird gleich wieder auf das Set gesetzt.
+        window.history.replaceState(null, '', `#/set/${set.id}`);
+        scanStarten(set, editorAktionen);
+      }
+      return seite;
     }
 
     case 'neu': {
       // Ersetzen statt anhängen: sonst legt ein Schritt zurück ein weiteres Set an.
-      const set = setSpeichern({ name: 'Neues Lernset', sprache: 'Englisch', sprachcode: 'en-US', vokabeln: [] });
-      return gehe(`#/set/${set.id}`, true);
+      const ausFoto = wert === 'foto';
+      const set = setSpeichern({
+        name: ausFoto ? 'Foto-Lernset' : 'Neues Lernset',
+        sprache: 'Englisch', sprachcode: 'en-US', vokabeln: []
+      });
+      return gehe(`#/set/${set.id}${ausFoto ? '/scan' : ''}`, true);
     }
 
     case 'lernen':
@@ -116,6 +127,7 @@ function zeichnen() {
         lernen: (setId, modus) => gehe(`#/lernen/${setId}/${modus || 'alle'}`),
         bearbeiten: (setId) => gehe(`#/set/${setId}`),
         neu: () => gehe('#/neu'),
+        ausFoto: () => gehe('#/neu/foto'),
         fortschritt: () => gehe('#/fortschritt')
       }));
   }

@@ -107,6 +107,38 @@ export function antwortPruefen(eingabe, loesung, optionen = {}) {
   return { urteil: 'falsch', abstand: bester.abstand, treffer: bester.treffer };
 }
 
+/** Artikel, die als solche erkannt werden (mehrere Sprachen). */
+const ARTIKEL = new Set([
+  'der', 'die', 'das', 'den', 'dem', 'ein', 'eine',
+  'the', 'a', 'an',
+  'el', 'la', 'los', 'las', 'un', 'una',
+  'le', 'les', 'une', 'l',
+  'il', 'lo', 'gli', 'i',
+  'de', 'het', 'een', 'ett', 'en'
+]);
+
+/**
+ * Prüft, ob der Artikel einer Vokabel mitgeschrieben wurde.
+ *
+ * Der Artikel gehört zur Vokabel – wer ihn weglässt, hat das Wort noch nicht
+ * ganz. Die Antwort zählt trotzdem als richtig, wird aber als unvollständig
+ * gekennzeichnet und noch einmal geschrieben.
+ *
+ * @param {string} eingabe
+ * @param {string} erwartet  Artikel der Vokabel ("" = nichts zu prüfen)
+ * @returns {null|'fehlt'|'falsch'}
+ */
+export function artikelPruefen(eingabe, erwartet) {
+  const soll = String(erwartet || '').trim().toLowerCase().replace(/[^\p{L}']/gu, '');
+  if (!soll) return null;
+
+  const erstes = String(eingabe || '').trim().toLowerCase().split(/[\s']+/)[0] || '';
+  const bereinigt = erstes.replace(/[^\p{L}]/gu, '');
+  if (!bereinigt) return 'fehlt';
+  if (bereinigt === soll) return null;
+  return ARTIKEL.has(bereinigt) ? 'falsch' : 'fehlt';
+}
+
 /** Stimmt die Abschrift beim Korrigieren exakt? (Umlaute/Artikel bleiben dabei relevant.) */
 export function abschriftStimmt(eingabe, loesung) {
   return normalisieren(eingabe, { artikelEntfernen: false }) === normalisieren(loesung, { artikelEntfernen: false });

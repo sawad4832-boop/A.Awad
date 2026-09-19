@@ -144,7 +144,7 @@ export function sessionSeite(session, aktionen) {
     const eingabe = el('input.feld.feld--gross', {
       type: 'text', autocomplete: 'off', autocorrect: 'off', autocapitalize: 'off', spellcheck: 'false',
       'aria-label': aufgabe.frage,
-      placeholder: aufgabe.artId === 'wort-bedeutung' ? 'Bedeutung eingeben' : `Wort auf ${session.set.sprache}`,
+      placeholder: platzhalter(aufgabe),
       onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); pruefen(); } }
     });
 
@@ -166,6 +166,15 @@ export function sessionSeite(session, aktionen) {
         hinweisKnopf(hinweisBereich)
       )
     ];
+  }
+
+  /** Verrät im Eingabefeld, dass der Artikel dazugehört. */
+  function platzhalter(aufgabe) {
+    if (aufgabe.artId === 'wort-bedeutung') return 'Bedeutung eingeben';
+    if (aufgabe.vokabel.artikel && aufgabe.loesung === aufgabe.vokabel.wort) {
+      return `Wort mit Artikel (${session.set.sprache})`;
+    }
+    return `Wort auf ${session.set.sprache}`;
   }
 
   /* --- Auswahl ----------------------------------------------------------- */
@@ -249,11 +258,11 @@ export function sessionSeite(session, aktionen) {
   function rueckmeldungsKarte() {
     const r = session.rueckmeldung;
     if (!r) return null;
-    const art = r.richtig ? (r.schreibfehler ? 'warn' : 'gut') : 'fehler';
+    const art = r.richtig ? (r.schreibfehler || r.artikelfehler ? 'warn' : 'gut') : 'fehler';
     return el('div.rueckmeldung.rueckmeldung--' + art, {},
       el('div.rueckmeldung__titel', {}, (r.richtig ? '✓ ' : '✗ ') + r.titel),
       el('div.rueckmeldung__loesung', {}, r.loesung),
-      el('div.rueckmeldung__text', {}, r.richtig && !r.schreibfehler ? r.bedeutung : r.text)
+      el('div.rueckmeldung__text', {}, r.richtig && !r.schreibfehler && !r.artikelfehler ? r.bedeutung : r.text)
     );
   }
 

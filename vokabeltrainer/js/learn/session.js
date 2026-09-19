@@ -16,7 +16,7 @@
 
 import { Wiederholungsplan } from './scheduler.js';
 import { artWaehlen, aufgabeBauen } from './generator.js';
-import { antwortPruefen, abschriftStimmt } from './text.js';
+import { antwortPruefen, abschriftStimmt, artikelPruefen } from './text.js';
 import { hinweis, HINWEIS_STUFEN } from './hints.js';
 import { abrufVerbuchen, lernzeitVerbuchen } from '../core/store.js';
 import { tonVerfuegbar as sprachausgabeFuer } from '../audio/speech.js';
@@ -126,6 +126,16 @@ export class Lernsession {
     if (pruefung.urteil === 'leer') return null;
 
     if (pruefung.urteil === 'richtig') {
+      const artikel = this.artikelStand(eingabe);
+      if (artikel) {
+        return this.ergebnisVerbuchen({
+          richtig: true,
+          artikelfehler: true,
+          antwort: eingabe,
+          titel: artikel === 'fehlt' ? 'Richtig – aber der Artikel fehlt' : 'Richtig – aber der Artikel stimmt nicht',
+          text: `Die Vokabel heißt „${aufgabe.loesungAnzeige}“.`
+        });
+      }
       return this.ergebnisVerbuchen({
         richtig: true,
         antwort: eingabe,
@@ -152,6 +162,17 @@ export class Lernsession {
       titel: verwechselt ? 'Das ist eine andere Vokabel' : 'Noch nicht richtig',
       text: `Du hast „${eingabe.trim()}“ geschrieben. Richtig ist „${aufgabe.loesungAnzeige}“.`
     });
+  }
+
+  /**
+   * Fehlt bei dieser Aufgabe der Artikel der Vokabel?
+   * Geprüft wird nur dort, wo das fremdsprachliche Wort selbst gefragt ist.
+   * @private
+   */
+  artikelStand(eingabe) {
+    const aufgabe = this.aufgabe;
+    if (!aufgabe || aufgabe.loesung !== aufgabe.vokabel.wort) return null;
+    return artikelPruefen(eingabe, aufgabe.vokabel.artikel);
   }
 
   /** Antwort auf eine Auswahlaufgabe. */
@@ -225,13 +246,13 @@ export class Lernsession {
    * Gemeinsame Verbuchung aller Ergebnisse.
    * @private
    */
-  ergebnisVerbuchen({ richtig, antwort, titel, text, schreibfehler = false, einschaetzung, aufgeloest = false, abschriftErzwingen = false }) {
+  ergebnisVerbuchen({ richtig, antwort, titel, text, schreibfehler = false, artikelfehler = false, einschaetzung, aufgeloest = false, abschriftErzwingen = false }) {
     const aufgabe = this.aufgabe;
     const hinweise = this.hinweisStufe;
 
     this.plan.melden(aufgabe.eintrag, aufgabe.artId, {
       richtig,
-      sauber: richtig && !hinweise && !schreibfehler,
+      sauber: richtig && !hinweise && !schreibfehler && !artikelfehler,
       schreibfehler,
       hinweise,
       einschaetzung
@@ -265,12 +286,13 @@ export class Lernsession {
     // Nach jedem Fehler wird die richtige Lösung einmal selbst geschrieben –
     // damit aus einem Fehler eine Korrektur wird und kein Weiterklicken.
     // Ausnahme: "War unsicher" auf der Karteikarte ist kein Fehler.
-    const brauchtAbschrift = (!richtig || schreibfehler) && einschaetzung !== 'unsicher';
+    const brauchtAbschrift = (!richtig || schreibfehler || artikelfehler) && einschaetzung !== 'unsicher';
 
     this.phase = brauchtAbschrift ? 'abschrift' : 'rueckmeldung';
     this.rueckmeldung = {
       richtig,
       schreibfehler,
+      artikelfehler,
       aufgeloest,
       titel,
       text,

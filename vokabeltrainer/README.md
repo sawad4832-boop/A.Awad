@@ -99,6 +99,30 @@ wird ohne Browser und ohne Abhängigkeiten geprüft:
 node tests/logik.test.mjs
 ```
 
+## Vokabeln aus einem Foto
+
+Eine Vokabelliste aus dem Schulbuch oder dem Heft abfotografieren – „📷 Aus
+Foto“ auf der Startseite oder im Lernset. Claude liest das Bild, ordnet die
+beiden Spalten nach Sprache zu (nicht nach Position) und erkennt auch
+Handschrift.
+
+**Artikel gehören zur Vokabel und werden mitgenommen.** Sie landen in einem
+eigenen Feld (`la casa`, `the window`), sind in der Prüfliste sichtbar und
+änderbar und werden beim Lernen überall mit angezeigt. Wird beim Abfragen nur
+das Wort ohne Artikel getippt, zählt die Antwort als richtig, gilt aber als
+unvollständig: die volle Form wird angezeigt und einmal geschrieben, und das
+Wort ist für die Runde noch nicht gesichert. Ein falscher Artikel wird
+ebenso benannt.
+
+Das Erkannte wird **immer zuerst zum Prüfen angezeigt**: Wörter korrigieren,
+Zeilen löschen, Bilder ändern – erst dann wird übernommen. Überschriften wie
+„Unit 3“ und Nummerierungen werden aussortiert.
+
+Diese Funktion läuft über Claude und steht deshalb nur in der veröffentlichten
+Version der App zur Verfügung; die Anfrage geht über das Claude-Konto des
+Nutzers. In einer lokalen Kopie sagt der Dialog das und verweist auf den
+Import als Textliste.
+
 ## Vokabeln anlegen
 
 * **Einzeln** über „+ Vokabel hinzufügen“ – mit Artikel, Plural, Beispielsatz,
