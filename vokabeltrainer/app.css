@@ -1,0 +1,310 @@
+/* ---------------------------------------------------------------------------
+   Vokabeltrainer – Oberfläche
+   Ruhiges, kontrastreiches Layout. Große Bilder, große Eingabefelder,
+   klare Zustandsfarben. Alles ohne Framework, damit die App sofort läuft.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --grund:        #f6f7f9;
+  --flaeche:      #ffffff;
+  --flaeche-2:    #f1f3f7;
+  --rand:         #e2e6ee;
+  --text:         #12161f;
+  --text-leise:   #5c6679;
+  --akzent:       #2f5bea;
+  --akzent-weich: #e8edff;
+  --gut:          #17855a;
+  --gut-weich:    #e3f5ec;
+  --fehler:       #c8302f;
+  --fehler-weich: #fdeaea;
+  --warn:         #a9690a;
+  --warn-weich:   #fdf1dd;
+  --radius:       18px;
+  --radius-klein: 12px;
+  --schatten:     0 1px 2px rgba(18,22,31,.06), 0 8px 24px rgba(18,22,31,.06);
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grund:        #0f1219;
+    --flaeche:      #171b24;
+    --flaeche-2:    #1f2530;
+    --rand:         #2b323f;
+    --text:         #eef1f7;
+    --text-leise:   #a0a9bb;
+    --akzent:       #7a9bff;
+    --akzent-weich: #1e2740;
+    --gut:          #4ed69b;
+    --gut-weich:    #14301f;
+    --fehler:       #ff8b87;
+    --fehler-weich: #351a1c;
+    --warn:         #f0bc63;
+    --warn-weich:   #33260f;
+    --schatten:     0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--grund);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3 { line-height: 1.2; margin: 0; letter-spacing: -.02em; }
+p { margin: 0; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 50;
+  background: var(--akzent); color: #fff; padding: .7rem 1rem; border-radius: 0 0 8px 0;
+}
+.skip:focus { left: 0; }
+
+/* --- Kopfzeile ----------------------------------------------------------- */
+.kopf {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: .85rem clamp(1rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--rand); background: var(--flaeche);
+  position: sticky; top: 0; z-index: 20;
+}
+.kopf__marke {
+  display: flex; align-items: center; gap: .6rem;
+  background: none; border: 0; padding: .25rem; cursor: pointer;
+  font: 600 1.05rem/1 var(--font); color: var(--text); letter-spacing: -.01em;
+}
+.kopf__logo {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px;
+  background: var(--akzent); color: #fff; font-weight: 700; font-size: .95rem;
+}
+.kopf__nav { display: flex; gap: .25rem; }
+.kopf__nav button {
+  background: none; border: 0; border-radius: 999px; padding: .5rem .9rem; cursor: pointer;
+  font: 500 .95rem/1 var(--font); color: var(--text-leise);
+}
+.kopf__nav button:hover { background: var(--flaeche-2); color: var(--text); }
+.kopf__nav button[aria-current="page"] { background: var(--akzent-weich); color: var(--akzent); }
+
+.buehne {
+  max-width: 960px; margin: 0 auto; padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 4vw, 2rem) 5rem;
+  outline: none;
+}
+.buehne--weit { max-width: 1100px; }
+
+/* --- Bausteine ----------------------------------------------------------- */
+.karte {
+  background: var(--flaeche); border: 1px solid var(--rand);
+  border-radius: var(--radius); box-shadow: var(--schatten);
+}
+
+.knopf {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  border: 1px solid var(--rand); background: var(--flaeche); color: var(--text);
+  border-radius: var(--radius-klein); padding: .8rem 1.15rem; cursor: pointer;
+  font: 600 1rem/1.2 var(--font); min-height: 48px;
+  transition: transform .06s ease, background .12s ease, border-color .12s ease;
+}
+.knopf:hover { background: var(--flaeche-2); }
+.knopf:active { transform: translateY(1px); }
+.knopf:disabled { opacity: .5; cursor: not-allowed; }
+.knopf--haupt { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+.knopf--haupt:hover { background: var(--akzent); filter: brightness(1.08); }
+.knopf--gross { padding: 1rem 1.4rem; font-size: 1.05rem; min-height: 56px; }
+.knopf--voll { width: 100%; }
+.knopf--leise { border-color: transparent; background: transparent; color: var(--text-leise); font-weight: 500; }
+.knopf--leise:hover { background: var(--flaeche-2); color: var(--text); }
+.knopf--gefahr { color: var(--fehler); }
+
+:focus-visible { outline: 3px solid var(--akzent); outline-offset: 2px; border-radius: 6px; }
+
+.feld {
+  width: 100%; border: 2px solid var(--rand); background: var(--flaeche);
+  color: var(--text); border-radius: var(--radius-klein);
+  padding: .85rem 1rem; font: 400 1.05rem/1.4 var(--font);
+}
+.feld:focus { border-color: var(--akzent); outline: none; }
+textarea.feld { min-height: 150px; resize: vertical; font-size: 1rem; }
+.feld--gross { font-size: clamp(1.25rem, 4vw, 1.6rem); padding: 1rem 1.1rem; text-align: center; font-weight: 600; }
+.feld--gut { border-color: var(--gut); background: var(--gut-weich); }
+.feld--fehler { border-color: var(--fehler); background: var(--fehler-weich); }
+
+.etikett { display: block; font-size: .85rem; font-weight: 600; color: var(--text-leise); margin-bottom: .35rem; }
+.leise { color: var(--text-leise); }
+.klein { font-size: .9rem; }
+
+.reihe { display: flex; gap: .6rem; flex-wrap: wrap; }
+.reihe--ende { justify-content: flex-end; }
+.stapel { display: grid; gap: 1rem; }
+.stapel--eng { gap: .6rem; }
+
+.marke {
+  display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px;
+  padding: .25rem .6rem; font-size: .8rem; font-weight: 600;
+  background: var(--flaeche-2); color: var(--text-leise);
+}
+.marke--gut { background: var(--gut-weich); color: var(--gut); }
+.marke--fehler { background: var(--fehler-weich); color: var(--fehler); }
+.marke--warn { background: var(--warn-weich); color: var(--warn); }
+
+/* --- Startseite ---------------------------------------------------------- */
+.start__kopf { display: grid; gap: .4rem; margin-bottom: 1.5rem; }
+.start__kopf h1 { font-size: clamp(1.7rem, 5vw, 2.3rem); }
+
+.kennzahlen {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: .75rem; margin-bottom: 1.75rem;
+}
+.kennzahl { padding: 1rem 1.1rem; }
+.kennzahl__wert { font-size: 1.8rem; font-weight: 700; letter-spacing: -.03em; }
+.kennzahl__titel { font-size: .85rem; color: var(--text-leise); }
+
+.abschnitt__kopf {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 1rem; margin: 0 0 .85rem;
+}
+.abschnitt__kopf h2 { font-size: 1.2rem; }
+
+.setliste { display: grid; gap: .75rem; }
+.set { padding: 1.1rem 1.2rem; display: grid; gap: .9rem; }
+.set__oben { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.set__name { font-size: 1.15rem; font-weight: 650; }
+.set__meta { font-size: .88rem; color: var(--text-leise); }
+.set__aktionen { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+.balken { height: 8px; border-radius: 999px; background: var(--flaeche-2); overflow: hidden; }
+.balken__fuellung { height: 100%; background: var(--akzent); border-radius: 999px; transition: width .35s ease; }
+.balken__fuellung--gut { background: var(--gut); }
+
+.leerzustand { padding: 2.5rem 1.5rem; text-align: center; display: grid; gap: 1rem; justify-items: center; }
+
+/* --- Bildkachel ---------------------------------------------------------- */
+.bild {
+  display: grid; place-items: center; overflow: hidden;
+  border-radius: var(--radius); background: var(--flaeche-2);
+  aspect-ratio: 4 / 3; width: 100%;
+}
+.bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bild__emoji { font-size: min(34vw, 190px); line-height: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,.16)); }
+.bild--klein { aspect-ratio: 1; width: 64px; border-radius: 12px; }
+.bild--klein .bild__emoji { font-size: 34px; }
+.bild--hinweis { animation: puls 1.1s ease 2; box-shadow: 0 0 0 4px var(--akzent-weich); }
+@keyframes puls { 50% { transform: scale(1.03); } }
+
+/* --- Lernsession --------------------------------------------------------- */
+.session { display: grid; gap: 1.25rem; }
+.session__leiste { display: grid; gap: .5rem; }
+.session__zeile { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: .9rem; color: var(--text-leise); }
+.session__zaehler { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
+
+.aufgabe { padding: clamp(1.1rem, 3.5vw, 1.75rem); display: grid; gap: 1.1rem; }
+.aufgabe__art { font-size: .82rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--akzent); }
+.aufgabe__frage { font-size: clamp(1.1rem, 3vw, 1.3rem); font-weight: 600; }
+.aufgabe__reiz { font-size: clamp(2rem, 8vw, 3.2rem); font-weight: 700; letter-spacing: -.03em; text-align: center; padding: .5rem 0; }
+.aufgabe__zusatz { text-align: center; color: var(--text-leise); }
+.aufgabe__bild { max-width: 420px; margin: 0 auto; width: 100%; }
+
+.wahl { display: grid; gap: .6rem; }
+.wahl__option {
+  text-align: left; padding: 1rem 1.1rem; font-size: 1.05rem; font-weight: 500;
+  border: 2px solid var(--rand); border-radius: var(--radius-klein);
+  background: var(--flaeche); color: var(--text); cursor: pointer; min-height: 56px;
+}
+.wahl__option:hover:not(:disabled) { border-color: var(--akzent); background: var(--akzent-weich); }
+.wahl__option--gut { border-color: var(--gut); background: var(--gut-weich); }
+.wahl__option--fehler { border-color: var(--fehler); background: var(--fehler-weich); }
+.wahl__option:disabled { cursor: default; }
+
+.rueckmeldung { border-radius: var(--radius-klein); padding: .9rem 1.1rem; display: grid; gap: .3rem; }
+.rueckmeldung--gut { background: var(--gut-weich); color: var(--gut); }
+.rueckmeldung--fehler { background: var(--fehler-weich); color: var(--fehler); }
+.rueckmeldung--warn { background: var(--warn-weich); color: var(--warn); }
+.rueckmeldung__titel { font-weight: 700; }
+.rueckmeldung__loesung { font-size: 1.35rem; font-weight: 700; color: var(--text); letter-spacing: -.02em; }
+.rueckmeldung__text { color: var(--text); font-size: .95rem; }
+
+.hinweis { background: var(--akzent-weich); color: var(--akzent); border-radius: var(--radius-klein); padding: .75rem 1rem; font-weight: 600; }
+.hinweis__luecke { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .22em; }
+
+.karteikarte { display: grid; gap: 1rem; text-align: center; }
+.karteikarte__antwort { display: grid; gap: .35rem; padding: 1.1rem; background: var(--flaeche-2); border-radius: var(--radius-klein); }
+.karteikarte__wort { font-size: clamp(1.6rem, 6vw, 2.2rem); font-weight: 700; letter-spacing: -.02em; }
+.bewertung { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.bewertung .knopf { flex-direction: column; gap: .2rem; padding: .85rem .5rem; font-size: .95rem; }
+
+.tonknopf { display: inline-flex; align-items: center; gap: .5rem; }
+.tonknopf--riesig { width: 100%; padding: 1.5rem; font-size: 1.15rem; }
+
+/* --- Ergebnis ------------------------------------------------------------ */
+.ergebnis__zahl { font-size: 3rem; font-weight: 700; letter-spacing: -.04em; }
+.tabelle { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.tabelle th, .tabelle td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--rand); }
+.tabelle th { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-leise); }
+.tabelle td:last-child, .tabelle th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* --- Editor -------------------------------------------------------------- */
+.vokabelzeile {
+  display: grid; gap: .75rem; padding: 1rem; align-items: center;
+  grid-template-columns: 64px 1fr auto;
+}
+.vokabelzeile__text { display: grid; gap: .15rem; min-width: 0; }
+.vokabelzeile__wort { font-weight: 650; overflow-wrap: anywhere; }
+.reiter { display: flex; gap: .25rem; border-bottom: 1px solid var(--rand); margin-bottom: 1.25rem; flex-wrap: wrap; }
+.reiter button {
+  background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
+  padding: .7rem .9rem; font: 600 .98rem/1 var(--font); color: var(--text-leise);
+}
+.reiter button[aria-selected="true"] { color: var(--akzent); border-bottom-color: var(--akzent); }
+
+.gitter-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+@media (max-width: 560px) { .gitter-2 { grid-template-columns: 1fr; } }
+
+.emojiwahl {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: .4rem; max-height: 320px; overflow-y: auto; padding: .25rem;
+}
+.emojiwahl button {
+  aspect-ratio: 1; font-size: 28px; border: 1px solid var(--rand); background: var(--flaeche);
+  border-radius: 10px; cursor: pointer; display: grid; place-items: center;
+}
+.emojiwahl button:hover { background: var(--akzent-weich); border-color: var(--akzent); }
+.emojiwahl button[aria-pressed="true"] { background: var(--akzent-weich); border-color: var(--akzent); }
+
+/* --- Dialog -------------------------------------------------------------- */
+.dialog {
+  position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
+  background: rgba(10,13,20,.55); padding: 1rem; backdrop-filter: blur(2px);
+}
+.dialog__kasten {
+  background: var(--flaeche); border-radius: var(--radius); border: 1px solid var(--rand);
+  padding: 1.25rem; width: min(560px, 100%); max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--schatten); display: grid; gap: 1rem;
+}
+.dialog__kopf { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+
+@media (max-width: 560px) {
+  .kopf { padding: .7rem 1rem; gap: .5rem; }
+  .kopf__marke { font-size: .98rem; }
+  .kopf__nav button { padding: .5rem .65rem; font-size: .9rem; }
+  .vokabelzeile { grid-template-columns: 48px 1fr; }
+  .vokabelzeile .set__aktionen { grid-column: 1 / -1; }
+  .bild--klein { width: 48px; }
+  .bild--klein .bild__emoji { font-size: 26px; }
+  .buehne { padding-bottom: 3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

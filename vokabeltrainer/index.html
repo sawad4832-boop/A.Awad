@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Vokabeltrainer – Bild, Abruf, Schreiben</title>
+<meta name="description" content="Vokabeln lernen mit Bild, aktivem Abrufen, Schreibübung und Aussprache. Schwierige Wörter werden innerhalb der Lernsession gezielt wiederholt.">
+<link rel="icon" href="../favicon.ico">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<a class="skip" href="#hauptbereich">Zum Inhalt springen</a>
+
+<header class="kopf" id="kopf" hidden>
+  <button class="kopf__marke" type="button" data-nav="start">
+    <span class="kopf__logo" aria-hidden="true">V</span>
+    <span>Vokabeltrainer</span>
+  </button>
+  <nav class="kopf__nav" aria-label="Hauptnavigation">
+    <button type="button" data-nav="start">Start</button>
+    <button type="button" data-nav="fortschritt">Fortschritt</button>
+  </nav>
+</header>
+
+<main id="hauptbereich" class="buehne" tabindex="-1"></main>
+
+<div id="dialogschicht"></div>
+<div id="statusmeldung" class="sr-only" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+<noscript>
+  <p style="padding:2rem;text-align:center">Für den Vokabeltrainer wird JavaScript benötigt.</p>
+</noscript>
+</body>
+</html>
