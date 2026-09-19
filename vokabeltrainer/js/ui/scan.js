@@ -30,6 +30,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   let abbruch = null;
   let erkennung = null;
   let gesucht = false;
+  let schritt = 'auswahl';
 
   const steuerung = dialog({
     titel: 'Vokabeln aus Foto',
@@ -42,6 +43,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
 
   /* --- Schritt 1: Foto wählen -------------------------------------------- */
   function auswahlZeigen(meldung) {
+    schritt = 'auswahl';
     const vorschau = el('div.reihe', {}, dateien.map((datei, stelle) =>
       el('div', { style: { position: 'relative' } },
         el('div.bild.bild--klein', {}, el('img', { src: vorschauUrls[stelle], alt: `Seite ${stelle + 1}` })),
@@ -61,7 +63,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
 
     const eingabe = el('input', {
       type: 'file',
-      accept: erkennung ? erkennung.dateitypen.join(',') : 'image/*',
+      accept: erkennung ? erkennung.dateitypen.join(',') : 'image/jpeg,image/png,image/webp',
       multiple: !erkennung || erkennung.maxBilder > 1,
       style: { display: 'none' },
       onchange: (e) => {
@@ -105,7 +107,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
       dateien.length ? vorschau : null,
       dateien.length
         ? el('button.knopf.knopf--haupt.knopf--gross.knopf--voll', {
-            type: 'button', disabled: !erkennung, onclick: erkennenStarten
+            type: 'button', onclick: erkennenStarten
           }, dateien.length === 1 ? 'Foto auswerten' : `${dateien.length} Seiten auswerten`)
         : null,
       dateien.length > 1
@@ -128,7 +130,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   }
 
   function hinweisZumWeg() {
-    if (!gesucht) return 'Bilderkennung wird vorbereitet …';
+    if (!gesucht) return 'Bilderkennung wird vorbereitet – du kannst schon Fotos auswählen.';
     if (!erkennung) return '';
     return 'Claude liest das Foto – auch Handschrift – und übernimmt dabei die Artikel. ' +
       'Dafür wird dein Claude-Kontingent genutzt; beim ersten Mal wird um Erlaubnis gefragt.';
@@ -137,22 +139,37 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   /** Hinweis, wenn die Seite Claude nicht fragen darf. */
   function nichtVerfuegbar() {
     return hinweis(
-      'Die Foto-Erkennung läuft über Claude und steht nur in der veröffentlichten Version der ' +
-      'App zur Verfügung. Hier kannst du die Vokabeln unter „Importieren“ als Liste einfügen.',
+      'Die Foto-Erkennung läuft über Claude und ist hier nicht erreichbar – das ist in einer ' +
+      'lokalen Kopie der App so, oder wenn die Seite Claude nicht nutzen darf. Du kannst die ' +
+      'Vokabeln unter „Importieren“ als Liste einfügen.',
       'warn'
     );
   }
 
   /* --- Schritt 2: erkennen ----------------------------------------------- */
   async function erkennenStarten() {
-    if (!dateien.length || !erkennung) return;
+    if (!dateien.length || schritt === 'liest') return;
+    schritt = 'liest';
     abbruch = new AbortController();
 
-    const text = el('p', {}, 'Wird vorbereitet …');
+    const text = el('p', {}, erkennung ? 'Wird vorbereitet …' : 'Bilderkennung wird vorbereitet …');
     const fortschritt = el('div', {}, balken(0.05));
     ersetzen(inhalt,
       el('div.stapel', {}, text, fortschritt,
         el('button.knopf.knopf--leise', { type: 'button', onclick: () => abbruch.abort() }, 'Abbrechen')));
+
+    // Die Anbindung meldet sich erst kurz nach dem Laden der Seite. Wer schneller
+    // tippt, wartet hier – der Knopf darf nie wirkungslos sein.
+    if (!erkennung) {
+      erkennung = await suche;
+      gesucht = true;
+    }
+    if (!erkennung) {
+      auswahlZeigen(nichtVerfuegbar());
+      abbruch = null;
+      return;
+    }
+    if (abbruch.signal.aborted) { auswahlZeigen(); abbruch = null; return; }
 
     try {
       const eintraege = await erkennung.lesen(dateien, {
@@ -195,6 +212,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
 
   /* --- Schritt 3: prüfen und korrigieren --------------------------------- */
   function pruefenZeigen(eintraege, warnung) {
+    schritt = 'pruefen';
     const liste = el('div.setliste', {});
 
     function zeichnen() {
@@ -293,11 +311,20 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   }
 
   // Erkennung im Hintergrund vorbereiten, damit der Dialog sofort offen ist.
+  // Die Zeitgrenze verhindert, dass der Dialog wartet, wenn sich niemand meldet.
+  const suche = Promise.race([
+    erkennungSuchen(),
+    new Promise((erfuellen) => setTimeout(() => erfuellen(null), 12000))
+  ]);
+
   auswahlZeigen();
-  erkennungSuchen().then((gefunden) => {
+
+  suche.then((gefunden) => {
     erkennung = gefunden;
     gesucht = true;
-    if (!dateien.length) auswahlZeigen();
+    // Nur neu zeichnen, solange die Auswahl zu sehen ist – sonst würde eine
+    // bereits geöffnete Prüfliste überschrieben.
+    if (schritt === 'auswahl') auswahlZeigen();
   });
 
   return steuerung;

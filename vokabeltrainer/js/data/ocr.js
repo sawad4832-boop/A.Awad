@@ -25,6 +25,13 @@ export const MAX_FOTOS = 12;
 const BILDER_PRO_ANFRAGE = 3;
 
 /**
+ * Bildformate, wenn die Ansicht keine Liste liefert. Bewusst ohne "image/*":
+ * iPhones wandeln HEIC-Fotos nur dann in JPEG um, wenn das Auswahlfeld
+ * ausdrücklich nach JPEG fragt.
+ */
+const STANDARD_TYPEN = ['image/jpeg', 'image/png', 'image/webp'];
+
+/**
  * @typedef {Object} Erkennung
  * @property {number} maxBilder   Fotos insgesamt
  * @property {string[]} dateitypen
@@ -41,12 +48,18 @@ export async function erkennungSuchen() {
     const sample = await window.claude.use('sample');
     if (!sample) return null;
     const grenzen = await sample.limits().catch(() => null);
-    if (!grenzen || !grenzen.images) return null;
-    const proAnfrage = Math.max(1, Math.min(BILDER_PRO_ANFRAGE, grenzen.images.maxCount || 1));
+    // Sagt die Ansicht ausdrücklich, dass sie keine Bilder schicken kann, ist hier Schluss.
+    if (grenzen && !grenzen.images) return null;
+
+    // Lässt sich das nicht ermitteln, wird es vorsichtig versucht: ein Bild pro
+    // Anfrage. Ein echtes Hindernis meldet dann die Anfrage selbst – mit einer
+    // Begründung, die der Nutzer lesen kann.
+    const bilder = (grenzen && grenzen.images) || null;
+    const proAnfrage = Math.max(1, Math.min(BILDER_PRO_ANFRAGE, (bilder && bilder.maxCount) || 1));
     return {
       maxBilder: MAX_FOTOS,
       proAnfrage,
-      dateitypen: grenzen.images.mediaTypes || ['image/jpeg', 'image/png'],
+      dateitypen: (bilder && bilder.mediaTypes) || STANDARD_TYPEN,
       lesen: (dateien, optionen) => lesen(sample, dateien, { ...optionen, proAnfrage })
     };
   } catch (fehler) {
