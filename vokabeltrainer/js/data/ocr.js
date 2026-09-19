@@ -14,9 +14,19 @@
 
 import { bildVorschlag } from './bilder.js';
 
+/** So viele Fotos dürfen für eine Liste zusammen ausgewertet werden. */
+export const MAX_FOTOS = 12;
+
+/**
+ * Bilder pro Anfrage. Mehrere Seiten werden nacheinander gelesen: das hält
+ * die Antwort je Anfrage kurz genug, um nicht abgeschnitten zu werden, und
+ * der Fortschritt bleibt sichtbar.
+ */
+const BILDER_PRO_ANFRAGE = 3;
+
 /**
  * @typedef {Object} Erkennung
- * @property {number} maxBilder
+ * @property {number} maxBilder   Fotos insgesamt
  * @property {string[]} dateitypen
  * @property {(dateien: File[], optionen: Object) => Promise<Object[]>} lesen
  */
@@ -32,10 +42,12 @@ export async function erkennungSuchen() {
     if (!sample) return null;
     const grenzen = await sample.limits().catch(() => null);
     if (!grenzen || !grenzen.images) return null;
+    const proAnfrage = Math.max(1, Math.min(BILDER_PRO_ANFRAGE, grenzen.images.maxCount || 1));
     return {
-      maxBilder: grenzen.images.maxCount || 1,
+      maxBilder: MAX_FOTOS,
+      proAnfrage,
       dateitypen: grenzen.images.mediaTypes || ['image/jpeg', 'image/png'],
-      lesen: (dateien, optionen) => lesen(sample, dateien, optionen)
+      lesen: (dateien, optionen) => lesen(sample, dateien, { ...optionen, proAnfrage })
     };
   } catch (fehler) {
     console.warn('Bilderkennung nicht verfügbar.', fehler);
@@ -79,18 +91,76 @@ export function leseAnweisung(sprache) {
   ].join('\n');
 }
 
-async function lesen(sample, dateien, { sprache, onMeldung, signal } = {}) {
-  if (onMeldung) onMeldung({ text: 'Claude liest das Bild …', anteil: 0.15 });
+/**
+ * Liest alle Fotos – bei Bedarf in mehreren Anfragen – und fügt die
+ * Ergebnisse in der Reihenfolge der Bilder zusammen.
+ */
+async function lesen(sample, dateien, { sprache, onMeldung, signal, proAnfrage = 1 } = {}) {
+  const stapel = stapelBilden([...dateien], proAnfrage);
+  const gesammelt = [];
 
-  const antwort = await sample.json(leseAnweisung(sprache), {
-    images: dateien,
-    modelTier: 'default',
-    signal,
-    onText: () => { if (onMeldung) onMeldung({ text: 'Vokabeln werden zusammengestellt …', anteil: 0.75 }); }
-  });
+  for (const [nummer, teil] of stapel.entries()) {
+    const erstes = stapel.slice(0, nummer).reduce((summe, s) => summe + s.length, 0) + 1;
+    const letztes = erstes + teil.length - 1;
+    if (onMeldung) {
+      onMeldung({
+        text: dateien.length > 1
+          ? `Claude liest Bild ${erstes === letztes ? erstes : erstes + '–' + letztes} von ${dateien.length} …`
+          : 'Claude liest das Bild …',
+        anteil: (nummer + 0.15) / stapel.length
+      });
+    }
 
-  if (!Array.isArray(antwort)) throw new Error('Unerwartete Antwort der Bilderkennung.');
-  return antwort.map(entwurfAufbereiten).filter(Boolean);
+    let antwort;
+    try {
+      antwort = await sample.json(leseAnweisung(sprache), {
+        images: teil,
+        modelTier: 'default',
+        signal,
+        onText: () => {
+          if (onMeldung) onMeldung({ text: 'Vokabeln werden zusammengestellt …', anteil: (nummer + 0.75) / stapel.length });
+        }
+      });
+    } catch (fehler) {
+      // Schon gelesene Seiten nicht verlieren – die Oberfläche zeigt sie mit Hinweis.
+      if (gesammelt.length && fehler && typeof fehler === 'object') fehler.teilErgebnis = doppelteEntfernen(gesammelt);
+      throw fehler;
+    }
+
+    if (!Array.isArray(antwort)) throw new Error('Unerwartete Antwort der Bilderkennung.');
+    gesammelt.push(...antwort.map(entwurfAufbereiten).filter(Boolean));
+  }
+
+  return doppelteEntfernen(gesammelt);
+}
+
+/** Teilt die Bilder in Gruppen für je eine Anfrage. */
+export function stapelBilden(liste, groesse) {
+  const schrittweite = Math.max(1, groesse);
+  const stapel = [];
+  for (let i = 0; i < liste.length; i += schrittweite) stapel.push(liste.slice(i, i + schrittweite));
+  return stapel;
+}
+
+/**
+ * Entfernt Wiederholungen – bei überlappenden Fotos steht dieselbe Vokabel
+ * sonst zweimal in der Liste. Ergänzende Angaben werden dabei übernommen.
+ */
+export function doppelteEntfernen(entwuerfe) {
+  const gesehen = new Map();
+  for (const entwurf of entwuerfe) {
+    const schluessel = `${entwurf.wort.toLowerCase()}|${entwurf.bedeutung.toLowerCase()}`;
+    const vorhanden = gesehen.get(schluessel);
+    if (!vorhanden) {
+      gesehen.set(schluessel, entwurf);
+      continue;
+    }
+    for (const feld of ['artikel', 'plural', 'beispiel']) {
+      if (!vorhanden[feld] && entwurf[feld]) vorhanden[feld] = entwurf[feld];
+    }
+    if (!vorhanden.bild && entwurf.bild) vorhanden.bild = entwurf.bild;
+  }
+  return [...gesehen.values()];
 }
 
 /** Meldungstext zu einem Fehlercode der Claude-Anbindung. */

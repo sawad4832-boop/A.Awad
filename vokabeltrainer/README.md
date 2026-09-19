@@ -114,6 +114,15 @@ unvollständig: die volle Form wird angezeigt und einmal geschrieben, und das
 Wort ist für die Runde noch nicht gesichert. Ein falscher Artikel wird
 ebenso benannt.
 
+**Mehrere Seiten** gehen in einem Durchgang: Fotos nacheinander hinzufügen
+(bis zu 12), einzelne Seiten wieder entfernen, dann alle zusammen auswerten.
+Die Seiten werden in Anfragen zu je drei Bildern gelesen – der Fortschritt
+zeigt, welche Seite gerade dran ist – und die Ergebnisse in der Reihenfolge
+der Bilder zusammengeführt. Vokabeln, die auf zwei Fotos vorkommen (etwa bei
+überlappenden Ausschnitten), erscheinen nur einmal; ergänzende Angaben wie
+Artikel oder Plural werden dabei übernommen. Bricht eine Anfrage ab, bleiben
+die bereits gelesenen Seiten erhalten und werden mit einem Hinweis angezeigt.
+
 Das Erkannte wird **immer zuerst zum Prüfen angezeigt**: Wörter korrigieren,
 Zeilen löschen, Bilder ändern – erst dann wird übernommen. Überschriften wie
 „Unit 3“ und Nummerierungen werden aussortiert.

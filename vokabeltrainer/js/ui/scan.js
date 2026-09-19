@@ -9,7 +9,7 @@
 
 import { el, ersetzen, balken, dialog, ansagen } from '../core/dom.js';
 import { anzahlText } from '../core/format.js';
-import { erkennungSuchen, claudeFehlerText } from '../data/ocr.js';
+import { erkennungSuchen, claudeFehlerText, MAX_FOTOS } from '../data/ocr.js';
 import { vokabelAnlegen } from '../data/vocab.js';
 import { bildVorschlag } from '../data/bilder.js';
 import { SPRACHEN } from '../data/sprachen.js';
@@ -43,7 +43,21 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
   /* --- Schritt 1: Foto wählen -------------------------------------------- */
   function auswahlZeigen(meldung) {
     const vorschau = el('div.reihe', {}, dateien.map((datei, stelle) =>
-      el('div.bild.bild--klein', {}, el('img', { src: vorschauUrls[stelle], alt: datei.name }))));
+      el('div', { style: { position: 'relative' } },
+        el('div.bild.bild--klein', {}, el('img', { src: vorschauUrls[stelle], alt: `Seite ${stelle + 1}` })),
+        el('span.klein.leise', { style: { display: 'block', textAlign: 'center' } }, `Seite ${stelle + 1}`),
+        el('button.knopf.knopf--leise.knopf--gefahr', {
+          type: 'button',
+          'aria-label': `Seite ${stelle + 1} entfernen`,
+          style: { position: 'absolute', top: '-8px', right: '-8px', minHeight: 'auto', padding: '.1rem .35rem', background: 'var(--flaeche)' },
+          onclick: () => {
+            URL.revokeObjectURL(vorschauUrls[stelle]);
+            dateien.splice(stelle, 1);
+            vorschauUrls.splice(stelle, 1);
+            auswahlZeigen();
+          }
+        }, '✕')
+      )));
 
     const eingabe = el('input', {
       type: 'file',
@@ -51,11 +65,15 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
       multiple: !erkennung || erkennung.maxBilder > 1,
       style: { display: 'none' },
       onchange: (e) => {
-        const grenze = erkennung ? erkennung.maxBilder : 1;
-        dateien = [...e.target.files].slice(0, grenze);
-        vorschauUrls.forEach((url) => URL.revokeObjectURL(url));
-        vorschauUrls = dateien.map((datei) => URL.createObjectURL(datei));
-        auswahlZeigen();
+        const grenze = erkennung ? erkennung.maxBilder : MAX_FOTOS;
+        const neue = [...e.target.files];
+        const platz = Math.max(0, grenze - dateien.length);
+        dateien = [...dateien, ...neue.slice(0, platz)];
+        vorschauUrls = [...vorschauUrls, ...neue.slice(0, platz).map((datei) => URL.createObjectURL(datei))];
+        e.target.value = '';   // dasselbe Foto darf erneut gewählt werden
+        auswahlZeigen(neue.length > platz
+          ? hinweis(`Es können höchstens ${grenze} Fotos auf einmal ausgewertet werden.`, 'warn')
+          : null);
       }
     });
 
@@ -76,16 +94,30 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
       el('p.leise.klein', {},
         'Fotografiere eine Vokabelliste – zum Beispiel aus dem Schulbuch oder aus deinem Heft. ' +
         'Zwei Spalten werden automatisch zugeordnet, Artikel kommen mit.'),
+      el('p.klein.leise', {},
+        `Mehrere Seiten? Füge nacheinander weitere Fotos hinzu – bis zu ${MAX_FOTOS} Seiten werden ` +
+        'zusammen ausgewertet und doppelte Vokabeln dabei zusammengeführt.'),
       meldung || null,
       gesucht && !erkennung ? nichtVerfuegbar() : null,
       spracheWaehlen,
-      el('label.knopf.knopf--haupt.knopf--gross.knopf--voll', {},
-        dateien.length ? 'Anderes Foto wählen' : '📷 Foto oder Bild wählen', eingabe),
+      el('label.knopf' + (dateien.length ? '' : '.knopf--haupt') + '.knopf--gross.knopf--voll', {},
+        dateien.length ? '+ Weiteres Foto hinzufügen' : '📷 Foto oder Bild wählen', eingabe),
       dateien.length ? vorschau : null,
       dateien.length
-        ? el('button.knopf.knopf--gross.knopf--voll', {
+        ? el('button.knopf.knopf--haupt.knopf--gross.knopf--voll', {
             type: 'button', disabled: !erkennung, onclick: erkennenStarten
-          }, `${anzahlText(dateien.length, 'Bild', 'Bilder')} auswerten`)
+          }, dateien.length === 1 ? 'Foto auswerten' : `${dateien.length} Seiten auswerten`)
+        : null,
+      dateien.length > 1
+        ? el('button.knopf.knopf--leise.klein', {
+            type: 'button',
+            onclick: () => {
+              vorschauUrls.forEach((url) => URL.revokeObjectURL(url));
+              dateien = [];
+              vorschauUrls = [];
+              auswahlZeigen();
+            }
+          }, 'Alle entfernen')
         : null,
       el('p.klein.leise', {}, hinweisZumWeg()),
       el('p.klein.leise', {},
@@ -140,20 +172,29 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
       }
       pruefenZeigen(eintraege);
     } catch (fehler) {
-      if (fehler && fehler.code === 'cancelled') { auswahlZeigen(); return; }
+      const teilErgebnis = (fehler && fehler.teilErgebnis) || [];
+      if (fehler && fehler.code === 'cancelled') {
+        if (teilErgebnis.length) pruefenZeigen(teilErgebnis, 'Abgebrochen – das bisher Gelesene steht hier.');
+        else auswahlZeigen();
+        return;
+      }
       console.warn('Texterkennung fehlgeschlagen.', fehler);
       const meldung = fehler && fehler.code
         ? claudeFehlerText(fehler)
         : 'Das Foto konnte nicht ausgewertet werden. Versuch es noch einmal ' +
           'oder füge die Vokabeln unter „Importieren“ als Text ein.';
-      auswahlZeigen(hinweis(meldung, 'fehler'));
+      if (teilErgebnis.length) {
+        pruefenZeigen(teilErgebnis, 'Nicht alle Seiten konnten gelesen werden: ' + meldung);
+      } else {
+        auswahlZeigen(hinweis(meldung, 'fehler'));
+      }
     } finally {
       abbruch = null;
     }
   }
 
   /* --- Schritt 3: prüfen und korrigieren --------------------------------- */
-  function pruefenZeigen(eintraege) {
+  function pruefenZeigen(eintraege, warnung) {
     const liste = el('div.setliste', {});
 
     function zeichnen() {
@@ -228,6 +269,7 @@ export function fotoScannen({ sprache, sprachcode, onUebernehmen }) {
     zaehlerAktualisieren();
 
     ersetzen(inhalt,
+      warnung ? hinweis(warnung, 'warn') : null,
       el('div.session__zeile', {},
         el('span', {}, 'Erkannt – bitte kurz prüfen'),
         zaehler

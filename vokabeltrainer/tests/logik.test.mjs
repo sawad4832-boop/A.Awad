@@ -7,7 +7,7 @@ import { artWaehlen, aufgabeBauen, antwortOptionen } from '../js/learn/generator
 import { textEinlesen } from '../js/data/import.js';
 import { vokabelAnlegen, koennenFortschreiben } from '../js/data/vocab.js';
 import { muster, hinweis } from '../js/learn/hints.js';
-import { entwurfAufbereiten, leseAnweisung } from '../js/data/ocr.js';
+import { entwurfAufbereiten, leseAnweisung, stapelBilden, doppelteEntfernen } from '../js/data/ocr.js';
 import { Lernsession } from '../js/learn/session.js';
 import { setAnlegen } from '../js/data/vocab.js';
 
@@ -234,6 +234,24 @@ test('Überschriften mit Nummer werden aussortiert', () => {
   assert.equal(entwurfAufbereiten({ wort: 'Seite 12', bedeutung: 'Wortschatz' }), null);
   assert.ok(entwurfAufbereiten({ wort: 'part', bedeutung: 'Teil' }), 'echte Vokabel bleibt');
   assert.equal(entwurfAufbereiten({ wort: '42', bedeutung: 'Antwort' }), null);
+});
+
+test('mehrere Seiten werden auf Anfragen verteilt', () => {
+  assert.deepEqual(stapelBilden([1, 2, 3, 4, 5, 6, 7], 3), [[1, 2, 3], [4, 5, 6], [7]]);
+  assert.deepEqual(stapelBilden([1, 2], 5), [[1, 2]]);
+  assert.deepEqual(stapelBilden([], 3), []);
+  assert.deepEqual(stapelBilden([1, 2], 0), [[1], [2]], 'Größe 0 wird abgefangen');
+});
+
+test('doppelte Vokabeln aus überlappenden Seiten werden zusammengeführt', () => {
+  const zusammen = doppelteEntfernen([
+    entwurfAufbereiten({ wort: 'casa', artikel: 'la', bedeutung: 'das Haus' }),
+    entwurfAufbereiten({ wort: 'perro', artikel: 'el', bedeutung: 'der Hund' }),
+    entwurfAufbereiten({ wort: 'Casa', bedeutung: 'das Haus', plural: 'casas' })
+  ]);
+  assert.equal(zusammen.length, 2, 'die Wiederholung fällt weg');
+  assert.equal(zusammen[0].artikel, 'la', 'der Artikel bleibt erhalten');
+  assert.equal(zusammen[0].plural, 'casas', 'ergänzende Angaben werden übernommen');
 });
 
 test('Anweisung an Claude nennt die Sprache und das Format', () => {
